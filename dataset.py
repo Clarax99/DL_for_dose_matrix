@@ -31,8 +31,9 @@ class niiDataset(Dataset):
   def __getitem__(self, idx):
 
     img_path = join(self.img_dir, self.img_labels.iloc[idx]["file_name"])
-    image = np.squeeze(np.asanyarray(nib.load(img_path).dataobj))
-    image_cropped = image[2:66, 3:67, 3:67]
+    image = np.squeeze(np.asanyarray(nib.load(img_path).dataobj))[np.newaxis]
+    image_cropped = image[0:1, 2:66, 3:67, 3:67]
+    print(image_cropped.shape)
 
     label = self.img_labels.iloc[idx]['Pathologie_cardiaque_3_new']
 

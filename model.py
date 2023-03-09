@@ -21,6 +21,39 @@ class FirstNet(nn.Module):
         x = nn.ReLU()(x)
         x = self.fc3(x)
         return x.float()
+    
+class CNN(nn.Module):
+    def __init__(self, out_channels: int, hidden_units : int =200):
+        super(CNN, self).__init__()
+        self.out_channels : int = out_channels
+        self.conv1 = nn.Sequential(
+            nn.Conv3d(1, out_channels, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(),
+            )
+        self.conv2 = nn.Sequential(
+            nn.Conv3d(out_channels, out_channels, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(),
+        )
+
+        self.fc1 = nn.Linear(out_channels*64*64*64, hidden_units)
+        self.fc2 = nn.Linear(hidden_units, hidden_units)
+        self.fc3 = nn.Linear(hidden_units, 2)
+
+
+    def forward(self, x):
+        x = x.float()
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.view(-1, self.out_channels*64*64*64)
+        x = self.fc1(x)
+        x = nn.ReLU()(x)
+        x = self.fc2(x)
+        x = nn.ReLU()(x)
+        x = self.fc3(x)
+        return x
+
 
 
 class Loop():

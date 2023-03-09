@@ -1,5 +1,5 @@
 from dataset import niiDataset
-from model import FirstNet, Loop
+from model import FirstNet, CNN, Loop
 from os.path import join
 import torch
 import torch.nn as nn
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=True)
 
     ### NET AND LOSS
-    net = FirstNet()
+    net = CNN(16)
     loss = nn.CrossEntropyLoss()
     optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001)
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam)
