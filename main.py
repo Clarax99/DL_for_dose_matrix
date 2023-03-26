@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     ### CONFIG
 
-
+    print("coucouu")
     path_to_dir = "/gpfs/workdir/cousteixc/dose_matrices"
     min_card_age = 50
     batch_size = 32
