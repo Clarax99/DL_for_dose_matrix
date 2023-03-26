@@ -29,6 +29,7 @@ if __name__ == "__main__":
     ### NET AND LOSS
     net = NewNet(15, 10)
     net = CNN(16).to(DEVICE)
+    net = CNN_tho(16).to(DEVICE)
     loss = nn.CrossEntropyLoss()
     optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001)
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE)

@@ -99,6 +99,63 @@ class NewNet():
         x = self.fc3(x)
         return x
 
+class CNN_tho(nn.Module):
+    def __init__(self, out_channels: int, hidden_units : int =200):
+        super(CNN, self).__init__()
+        self.out_channels : int = out_channels
+        self.conv1 = nn.Sequential(
+            nn.Conv3d(1, out_channels, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(),
+            )
+        self.conv2 = nn.Sequential(
+            nn.Conv3d(out_channels, out_channels*2, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*2),
+            nn.ReLU(),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv3d(out_channels*2, out_channels*3, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels*3),
+            nn.ReLU(),
+            torch.nn.MaxPool3d(kernel_size=2, stride=2),
+            )
+        self.conv4 = nn.Sequential(
+            nn.Conv3d(out_channels*3, out_channels*4, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*4),
+            nn.ReLU(),
+        )
+        self.conv5 = nn.Sequential(
+            nn.Conv3d(out_channels*4, out_channels*5, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels*5),
+            nn.ReLU(),
+            )
+        self.conv6 = nn.Sequential(
+            nn.Conv3d(out_channels*5, out_channels*6, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*6),
+            nn.ReLU(),
+        )
+
+        self.fc1 = nn.Linear(out_channels*6*32*32*32, hidden_units)
+        self.fc2 = nn.Linear(hidden_units, hidden_units)
+        self.fc3 = nn.Linear(hidden_units, 2)
+
+
+    def forward(self, x):
+        x = x.float()
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        x = self.conv6(x)
+        #print(x.shape)
+        x = x.view(-1, self.out_channels*6*32*32*32)
+        x = self.fc1(x)
+        x = nn.ReLU()(x)
+        x = self.fc2(x)
+        x = nn.ReLU()(x)
+        x = self.fc3(x)
+        return x
 
 class Loop():
 
