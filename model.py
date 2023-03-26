@@ -56,7 +56,7 @@ class CNN(nn.Module):
         return x
 
 
-class NewNet():
+"""class NewNet():
     super(NewNet, self).__init__()
         self.out_channels_1 : int = out_channels_1
         self.out_channels_2 : int = out_channels_2
@@ -97,11 +97,11 @@ class NewNet():
         x = self.fc2(x)
         x = nn.ReLU()(x)
         x = self.fc3(x)
-        return x
+        return x"""
 
 class CNN_tho(nn.Module):
     def __init__(self, out_channels: int, hidden_units : int =200):
-        super(CNN, self).__init__()
+        super(CNN_tho, self).__init__()
         self.out_channels : int = out_channels
         self.conv1 = nn.Sequential(
             nn.Conv3d(1, out_channels, kernel_size=3, stride = 1, padding =1),

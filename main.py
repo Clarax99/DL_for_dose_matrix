@@ -1,5 +1,5 @@
 from dataset import niiDataset
-from model import FirstNet, CNN, Loop, NewNet
+from model import FirstNet, CNN, Loop, CNN_tho
 from os.path import join
 import torch
 import torch.nn as nn
@@ -11,9 +11,9 @@ if __name__ == "__main__":
     ### CONFIG
 
     print("coucouu")
-    path_to_dir = "/gpfs/workdir/cousteixc/dose_matrices"
+    path_to_dir = "/gpfs/workdir/menardth/dose_matrices"
     min_card_age = 50
-    batch_size = 32
+    batch_size = 2
     epochs = 50
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=True)
 
     ### NET AND LOSS
-    net = NewNet(15, 10)
+    #net = NewNet(15, 10)
     net = CNN(16).to(DEVICE)
     net = CNN_tho(16).to(DEVICE)
     loss = nn.CrossEntropyLoss()
