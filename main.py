@@ -4,6 +4,7 @@ from os.path import join
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torchvision import transforms as tf
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
@@ -31,8 +32,13 @@ if __name__ == "__main__":
     feature_list = ["do_ANTHRA", "do_ALKYL", "do_VINCA"]
     
     ### DATALOADER
-    training_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, training = True)
-    val_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, validation = True)
+    data_transform = tf.Compose([
+                    tf.Normalize(mean=0.5, std=0.5)
+                    ])
+
+
+    training_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, training = True, transform=data_transform)
+    val_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, validation = True, transform=data_transform)
 
     print(len(training_data), len(val_data))
 
@@ -44,7 +50,7 @@ if __name__ == "__main__":
     loss = nn.CrossEntropyLoss()
     optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001)
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "new_net_0.pth"))
-    print(f"Training for {epochs} epochs on {DEVICE}")
+    print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
     for epoch in range(epochs):
         print(f"Epoch {epoch+1}\n-------------------------------")

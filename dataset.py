@@ -47,7 +47,7 @@ class niiDataset(Dataset):
 class NiiFeatureDataset(Dataset):
 
   def __init__(self, annotations_file, path_to_dir, min_card_age, feature_list,
-              training=False, validation=False, transform=None, target_transform=None):
+              training=False, validation=False, transform=None, feature_transform=None):
     
     assert min_card_age == 40 or min_card_age == 50
 
@@ -65,7 +65,7 @@ class NiiFeatureDataset(Dataset):
     self.img_dir = join(self.path_to_dir, 'nii')
 
     self.transform = transform
-    self.target_transform = target_transform
+    self.feature_transform = feature_transform
 
   def __len__(self):
     return len(self.labels_csv)
@@ -74,12 +74,17 @@ class NiiFeatureDataset(Dataset):
 
     img_path = join(self.img_dir, self.labels_csv.iloc[idx]["file_name"])
     image = np.squeeze(np.asanyarray(nib.load(img_path).dataobj))[np.newaxis]
-    image_cropped = image[0:1, 2:66, 3:67, 3:67]
+    image = torch.tensor(image[0:1, 2:66, 3:67, 3:67])
 
     label = self.labels_csv.iloc[idx]['Pathologie_cardiaque_3_new']
     features = torch.tensor(self.labels_csv.iloc[idx][self.feature_list])
 
-    return (image_cropped, features), label
+    if self.transform:
+        image = self.transform(image)
+    if self.feature_transform:
+        features = self.feature_transform(features)
+
+    return (image, features), label
 
 
 class TestDataset(Dataset):

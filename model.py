@@ -57,7 +57,6 @@ class CNN(nn.Module):
         x = self.fc3(x)
         return x
 
-
 class NewNet(nn.Module):
      
      def __init__(self, dim_features: int, out_channels_1: int, out_channels_2: int):
@@ -185,7 +184,6 @@ class Loop():
         size = len(self.train_dataloader.dataset)
         num_batches = len(self.train_dataloader)
         train_loss, train_acc = 0, 0
-        print(self.net.__class__.__name__)
 
         for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False):
             # Compute prediction and loss
