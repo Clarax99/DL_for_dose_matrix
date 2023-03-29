@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 from sklearn.metrics import balanced_accuracy_score, cohen_kappa_score, confusion_matrix,f1_score, ConfusionMatrixDisplay
 import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from tqdm import tqdm 
 
 
@@ -215,8 +216,9 @@ class Loop():
         self.save_best_model(test_loss, self.net)
 
         cm = confusion_matrix(y_true=y_val, y_pred=y_pred)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        disp.plot()
+        #disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+        #disp.plot()
+        print(cm)
 
 
 class SaveBestModel:
