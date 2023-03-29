@@ -1,4 +1,4 @@
-from dataset import niiDataset
+from dataset import niiDataset, NiiFeatureDataset
 from model import FirstNet, CNN, Loop, CNN_tho, NewNet
 from os.path import join
 import torch
@@ -28,10 +28,11 @@ if __name__ == "__main__":
     batch_size = 4
     epochs = 50
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    feature_list = ["do_ANTHRA", "do_ALKYL", "do_VINCA"]
     
     ### DATALOADER
-    training_data = niiDataset(csv_name, path_to_dir, min_card_age, training = True)
-    val_data = niiDataset(csv_name, path_to_dir, min_card_age, validation = True)
+    training_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, training = True)
+    val_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, validation = True)
 
     print(len(training_data), len(val_data))
 
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=True)
 
     ### NET AND LOSS
-    net = NewNet(15, 10).to(DEVICE)
+    net = NewNet(len(feature_list), 15, 10).to(DEVICE)
     loss = nn.CrossEntropyLoss()
     optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001)
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "new_net_0.pth"))

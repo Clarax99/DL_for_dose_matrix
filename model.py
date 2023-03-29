@@ -60,11 +60,12 @@ class CNN(nn.Module):
 
 class NewNet(nn.Module):
      
-     def __init__(self, out_channels_1: int, out_channels_2: int):
+     def __init__(self, dim_features: int, out_channels_1: int, out_channels_2: int):
         super(NewNet, self).__init__()
 
         self.out_channels_1 : int = out_channels_1
         self.out_channels_2 : int = out_channels_2
+        self.dim_features : int = dim_features
 
         self.conv1 = nn.Sequential(
             nn.Conv3d(1, self.out_channels_1, kernel_size=3, stride = 1, padding = 'valid'),
@@ -84,21 +85,32 @@ class NewNet(nn.Module):
             nn.Dropout(),
             nn.MaxPool3d(kernel_size=3)
             )
+        
+        self.conv_path = nn.Sequential(
+            self.conv1,
+            self.conv2, 
+            self.conv3,
+            nn.Flatten()
+        )
 
-        self.fc1 = nn.Linear(self.out_channels_1, 10)
-        self.fc2 = nn.Linear(10, 2)
+        self.feature_path = nn.Sequential(
+            nn.Linear(dim_features, self.out_channels_1), 
+            nn.ReLU()
+        )
+
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(self.out_channels_1*2, self.out_channels_2),
+            nn.ReLU(),
+            nn.Linear(self.out_channels_2, 2)
+        )
 
 
-     def forward(self, x):
-        x = x.float()
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = x.view(-1, self.out_channels_1)
-        x = self.fc1(x)
-        x = nn.ReLU()(x)
-        x = self.fc2(x)
-        return x
+     def forward(self, x1, x2):
+        x1 = self.conv_path(x1.float())
+        x2 = self.feature_path(x2.float())
+        x_cat = torch.cat((x1, x2), dim=1)
+        x_cat = self.fusion_layer(x_cat)
+        return x_cat
 
 class CNN_tho(nn.Module):
     def __init__(self, out_channels: int, hidden_units : int =200):
@@ -171,13 +183,17 @@ class Loop():
 
     def train_loop(self, epoch):
         size = len(self.train_dataloader.dataset)
-        num_batches = len(self.val_dataloader)
+        num_batches = len(self.train_dataloader)
         train_loss, train_acc = 0, 0
+        print(self.net.__class__.__name__)
 
         for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False):
             # Compute prediction and loss
-            pred = self.net(X.float().to(self.device))  
-            loss = self.loss_fct(pred, y.to(self.device)) #pred.float() ?
+            if self.net.__class__.__name__ == "NewNet": 
+                pred = self.net(X[0].to(self.device), X[1].to(self.device))
+            else : 
+                pred = self.net(X.float().to(self.device))  
+            loss = self.loss_fct(pred, y.to(self.device))
 
             # Backpropagation
             self.optimizer.zero_grad()
@@ -199,13 +215,13 @@ class Loop():
         with torch.no_grad():
             for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False):
                 y_val.extend(y.tolist())
-                pred = self.net(X.float().to(self.device))
+                if self.net.__class__.__name__ == "NewNet": 
+                    pred = self.net(X[0].to(self.device), X[1].to(self.device))
+                else : 
+                    pred = self.net(X.float().to(self.device))  
                 y_pred.extend(pred.argmax(1).tolist())
                 test_loss += self.loss_fct(pred, y.to(self.device)).item()/num_batches
                 correct += (pred.argmax(1).to(self.device) == y.to(self.device)).type(torch.float).sum().item()/size
-
-        #print(f"pred = {y_pred}")
-        #print(f"true = {y_val}")
 
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
         scores = {'balanced_accuracy': balanced_accuracy_score(y_val, y_pred),
