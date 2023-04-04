@@ -46,15 +46,21 @@ class niiDataset(Dataset):
   
 class NiiFeatureDataset(Dataset):
 
-  def __init__(self, annotations_file, path_to_dir, min_card_age, feature_list,
+  def __init__(self, annotations_file, feature_file, path_to_dir, min_card_age,
               training=False, validation=False, transform=None, feature_transform=None):
-    
-    assert min_card_age == 40 or min_card_age == 50
+    # annotations_file : nom du fichier contenant les labels (0 ou 1)
+    # feature_file : nom du ficher contenant les variable cliniques de la chimiothérapie. Ce fichier est situé dans le 
+    # même dossier que "annotations_file", accessible grâce à "path_to_dir"
+    # path_to_dir : chemin vers le dossier contenant les images (dans le sous-dossier nii), les labels (annotations_file)
+    # et les features cliniques (feature_file)
+    # min_card_age : entier de valeur ou 50, correspond au temps de censure minimal
+    # training, validation : booleans
+    # transform, feature_transform : if needed.
+    assert min_card_age == 40 or min_card_age == 50    
 
     self.labels_csv = pd.read_csv(join(path_to_dir, annotations_file), sep=',')
-    self.feature_list = feature_list
-
-    assert all(item in list(self.labels_csv.columns) for item in self.feature_list)
+    self.feature_csv = pd.read_csv(join(path_to_dir, feature_file), sep=',', index_col="file_name")
+    self.feature_list = self.feature_csv.columns[3:]
 
     if training:
       self.labels_csv = self.labels_csv[self.labels_csv[f'train_{min_card_age}'] == 1]
@@ -71,14 +77,14 @@ class NiiFeatureDataset(Dataset):
     return len(self.labels_csv)
 
   def __getitem__(self, idx):
+    img_name = self.labels_csv.iloc[idx]["file_name"]
 
-    img_path = join(self.img_dir, self.labels_csv.iloc[idx]["file_name"])
-    image = np.squeeze(np.asanyarray(nib.load(img_path).dataobj))[np.newaxis]
+    image = np.squeeze(np.asanyarray(nib.load(join(self.img_dir, img_name)).dataobj))[np.newaxis]
     image = torch.tensor(image[0:1, 2:66, 3:67, 3:67])
 
     label = self.labels_csv.iloc[idx]['Pathologie_cardiaque_3_new']
-    features = torch.tensor(self.labels_csv.iloc[idx][self.feature_list])
-
+    features = torch.tensor(self.feature_csv.iloc[idx][self.feature_list])
+    
     if self.transform:
         image = self.transform(image)
     if self.feature_transform:

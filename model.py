@@ -221,11 +221,7 @@ class Loop():
                 test_loss += self.loss_fct(pred, y.to(self.device)).item()/num_batches
                 correct += (pred.argmax(1).to(self.device) == y.to(self.device)).type(torch.float).sum().item()/size
 
-        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-        scores = {'balanced_accuracy': balanced_accuracy_score(y_val, y_pred),
-                'cohen_kappa': cohen_kappa_score(y_val, y_pred),
-                'macro_f1': f1_score(y_val, y_pred,average ='macro')}
-        print(scores)
+        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Balanced Accuracy: {(100*balanced_accuracy_score(y_val, y_pred)):>0.1f}%,  Avg loss: {test_loss:>8f} \n")
 
         self.save_best_model(test_loss, self.net)
 

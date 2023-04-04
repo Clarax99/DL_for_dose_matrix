@@ -9,7 +9,6 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
-
 if __name__ == "__main__":
 
     ### WHO IS RUNNING THE CODE
@@ -24,8 +23,10 @@ if __name__ == "__main__":
         csv_name = "labels.csv"
         if user=="cousteixc":
             path_to_dir = "D:\data\dose_matrices_updated_25_01_2023"
+        elif user=="menardth":
+            path_to_dir = "G:\data\dose_matrices_updated_25_01_2023"
 
-    min_card_age = 50
+    min_card_age = 40
     batch_size = 4
     epochs = 50
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -33,23 +34,36 @@ if __name__ == "__main__":
     
     ### DATALOADER
     data_transform = tf.Compose([
-                    tf.Normalize(mean=0.5, std=0.5)
+                    tf.Normalize(mean=1.3, std=4.9)
                     ])
 
 
-    training_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, training = True, transform=data_transform)
-    val_data = NiiFeatureDataset(csv_name, path_to_dir, min_card_age, feature_list, validation = True, transform=data_transform)
+    training_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, training = True)
+    val_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, validation = True)
 
-    print(len(training_data), len(val_data))
+    #training_data = niiDataset(csv_name, path_to_dir, min_card_age, training = True)
+    #val_data = niiDataset(csv_name, path_to_dir, min_card_age, validation = True)
 
-    train_dataloader = DataLoader(training_data, batch_size, shuffle=True, drop_last=True) #drop last à changer !
-    val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=True)
+    print(f"Train set : {len(training_data)}, Validation set : {len(val_data)}")
+
+    train_dataloader = DataLoader(training_data, batch_size, shuffle=True, drop_last=False)
+    val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=False)
+
+    def mean_std(loader):
+        mean, std = [], []
+        for images, labels in loader:
+            # shape of images = [b,c,w,h]
+            mean.append(images.mean([0, 2,3, 4]))
+            std.append(images.std([0, 2,3, 4]))
+        return sum(mean)/len(loader), sum(std)/len(loader)
+    
 
     ### NET AND LOSS
-    net = NewNet(len(feature_list), 15, 10).to(DEVICE)
+    net = NewNet(70, 15, 10).to(DEVICE)
+    #net =  CNN(16).to(DEVICE)
     loss = nn.CrossEntropyLoss()
     optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001)
-    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "new_net_0.pth"))
+    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "newnet_withTF_40.pth"))
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
     for epoch in range(epochs):
