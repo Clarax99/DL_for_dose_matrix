@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms as tf
 import os
+import json
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
@@ -34,10 +35,7 @@ if __name__ == "__main__":
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     
     ### DATALOADER
-    data_transform = tf.Compose([
-                    tf.Normalize(mean=1.3, std=4.9)
-                    ])
-
+    data_transform = tf.Compose([tf.Normalize(mean=1.3, std=4.9)])
 
     training_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, training = True)
     val_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, validation = True)
@@ -50,26 +48,25 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(training_data, batch_size, shuffle=True, drop_last=False)
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=False)
 
-    def mean_std(loader):
-        mean, std = [], []
-        for images, labels in loader:
-            # shape of images = [b,c,w,h]
-            mean.append(images.mean([0, 2,3, 4]))
-            std.append(images.std([0, 2,3, 4]))
-        return sum(mean)/len(loader), sum(std)/len(loader)
-    
-
     ### NET AND LOSS
+    name_exp = f'newnet_noreg_{min_card_age}_allfeat_weighted_loss_3'
     net = NewNet(70, 15, 10).to(DEVICE)
-    #net =  CNN(16).to(DEVICE)
     loss = nn.CrossEntropyLoss(weights)
-    #loss = LDAMHingeLoss(5, weights, len(training_data)+len(val_data))
-    optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0)
-    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "newnet_noreg_40_allfeat_weighted_loss_2.pth"))
+    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0)
+    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, "test.pth")
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
+    ### SAVING PARAMETERS
+    dic = {"name":name_exp, "min_card_age":min_card_age, "net": net.__class__.__name__, "loss": loss.__class__.__name__, "weighted": True if loss.weight!=None else False,
+           "optimizer":optimizer.__class__.__name__, "lr":optimizer.param_groups[0]['lr'], "weight_decay":optimizer.param_groups[0]['weight_decay']}
+    
+    with open(join(path_to_dir, "saved_models", f'{name_exp}.txt'), 'w') as f:
+        for key in dic:
+            f.write(f'{key} : {dic[key]}\n')
+
+    ### TRAINING
     for epoch in range(epochs):
-        print(f"-------------------------\n Epoch {epoch+1}")
+        print(f"-------------------------\nEpoch {epoch+1}")
         model.train_loop(epoch)
         model.validation_loop(epoch)
     print("Done!")    

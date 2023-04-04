@@ -171,14 +171,14 @@ class CNN_tho(nn.Module):
 
 class Loop():
 
-    def __init__(self, train_dataloader, val_dataloader, net, loss_fct, optimizer, device, path_to_saved_models):
+    def __init__(self, train_dataloader, val_dataloader, net, loss_fct, optimizer, device, path_to_dir, name_model):
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.net = net
         self.loss_fct = loss_fct
         self.optimizer = optimizer
         self.device= device
-        self.save_best_model = SaveBestModel(path_to_saved_models)
+        self.save_best_model = SaveBestModel(os.path.join(path_to_dir, "saved_models"), name_model)
 
     def train_loop(self, epoch):
         size = len(self.train_dataloader.dataset)
@@ -223,7 +223,7 @@ class Loop():
 
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Balanced Accuracy: {(100*balanced_accuracy_score(y_val, y_pred)):>0.1f}%,  Avg loss: {test_loss:>8f} \n")
 
-        self.save_best_model(test_loss, self.net)
+        self.save_best_model(epoch, 100*balanced_accuracy_score(y_val, y_pred), self.net)
 
         cm = confusion_matrix(y_true=y_val, y_pred=y_pred)
         #disp = ConfusionMatrixDisplay(confusion_matrix=cm)
@@ -233,17 +233,18 @@ class Loop():
 
 class SaveBestModel:
     """
-    Class to save tahe best model while training. If the current epoch's 
-    validation loss is less than the previous least less, then save the
+    Class to save the best model while training. If the current epoch's 
+    validation accuracy is less than the previous least less, then save the
     model state.
     """
-    def __init__(self, path_to_saved_models, best_valid_loss=float('inf')):
-        self.best_valid_loss = best_valid_loss
-        self.path_to_saved_models = path_to_saved_models
+    def __init__(self, path_to_saved_models, name_model, best_valid_acc=float('inf')):
+        self.best_valid_acc = best_valid_acc
+        self.path_to_saved_models = os.path.join(path_to_saved_models, name_model)
+        #self.dic = {"name": name_model.replace('.pth', '.txt')}
         
-    def __call__(self, current_valid_loss, model):
-        if current_valid_loss < self.best_valid_loss:
-            self.best_valid_loss = current_valid_loss
-            print(f"\nBest validation loss: {self.best_valid_loss}")
+    def __call__(self, current_valid_acc, model):
+        if current_valid_acc < self.best_valid_acc:
+            self.best_valid_acc = current_valid_acc
+            print(f"\nBest validation accuracy: {self.best_valid_acc}")
             print(f"\nSaving best model\n")
             torch.save(model.state_dict(), self.path_to_saved_models)
