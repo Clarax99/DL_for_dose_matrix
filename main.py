@@ -1,5 +1,6 @@
 from dataset import niiDataset, NiiFeatureDataset
 from model import FirstNet, CNN, Loop, CNN_tho, NewNet
+from loss import LDAMHingeLoss
 from os.path import join
 import torch
 import torch.nn as nn
@@ -27,10 +28,10 @@ if __name__ == "__main__":
             path_to_dir = "G:\data\dose_matrices_updated_25_01_2023"
 
     min_card_age = 40
+    weights = torch.tensor([1,(1378-282)/282]) if min_card_age==40 else torch.tensor([1, (580-282)/282])
     batch_size = 4
     epochs = 50
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    feature_list = ["do_ANTHRA", "do_ALKYL", "do_VINCA"]
     
     ### DATALOADER
     data_transform = tf.Compose([
@@ -61,13 +62,14 @@ if __name__ == "__main__":
     ### NET AND LOSS
     net = NewNet(70, 15, 10).to(DEVICE)
     #net =  CNN(16).to(DEVICE)
-    loss = nn.CrossEntropyLoss()
-    optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001)
-    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "newnet_withTF_40.pth"))
+    loss = nn.CrossEntropyLoss(weights)
+    #loss = LDAMHingeLoss(5, weights, len(training_data)+len(val_data))
+    optimizer_adam = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0)
+    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer_adam, DEVICE, join(path_to_dir, "saved_models", "newnet_noreg_40_allfeat_weighted_loss_2.pth"))
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
     for epoch in range(epochs):
-        print(f"Epoch {epoch+1}\n-------------------------------")
+        print(f"-------------------------\n Epoch {epoch+1}")
         model.train_loop(epoch)
         model.validation_loop(epoch)
     print("Done!")    
