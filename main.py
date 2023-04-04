@@ -7,7 +7,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms as tf
 import os
-import json
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
@@ -53,7 +52,7 @@ if __name__ == "__main__":
     net = NewNet(70, 15, 10).to(DEVICE)
     loss = nn.CrossEntropyLoss(weights)
     optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0)
-    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, "test.pth")
+    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, f"{name_exp}.pth")
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
     ### SAVING PARAMETERS

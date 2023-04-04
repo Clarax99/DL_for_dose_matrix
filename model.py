@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from sklearn.metrics import balanced_accuracy_score, cohen_kappa_score, confusion_matrix,f1_score, ConfusionMatrixDisplay
+from sklearn.metrics import balanced_accuracy_score, cohen_kappa_score, confusion_matrix,f1_score, ConfusionMatrixDisplay, accuracy_score, recall_score
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from tqdm import tqdm 
@@ -202,7 +202,7 @@ class Loop():
             y_pred_class = pred.argmax(1)
             train_acc += (y_pred_class.to(self.device) == y.to(self.device)).sum()/size
 
-        print(f"Train Error: \n Accuracy: {100*train_acc}%, Avg loss: {train_loss:>8f} \n")
+        print(f"Train Error: \n Accuracy: {(100*train_acc):>0.1f}%, Avg loss: {train_loss:>8f} \n")
 
     def validation_loop(self, epoch):
         size = len(self.val_dataloader.dataset)
@@ -223,11 +223,9 @@ class Loop():
 
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Balanced Accuracy: {(100*balanced_accuracy_score(y_val, y_pred)):>0.1f}%,  Avg loss: {test_loss:>8f} \n")
 
-        self.save_best_model(epoch, 100*balanced_accuracy_score(y_val, y_pred), self.net)
+        self.save_best_model(epoch, y_val, y_pred, self.net, test_loss)
 
         cm = confusion_matrix(y_true=y_val, y_pred=y_pred)
-        #disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        #disp.plot()
         print(cm)
 
 
@@ -240,11 +238,20 @@ class SaveBestModel:
     def __init__(self, path_to_saved_models, name_model, best_valid_acc=float('inf')):
         self.best_valid_acc = best_valid_acc
         self.path_to_saved_models = os.path.join(path_to_saved_models, name_model)
-        #self.dic = {"name": name_model.replace('.pth', '.txt')}
+        self.name_txt_file = self.path_to_saved_models.replace('pth', 'txt')
         
-    def __call__(self, current_valid_acc, model):
+    def __call__(self, epoch, y_true, y_pred, model, loss):
+        current_valid_acc = 100*balanced_accuracy_score(y_true, y_pred)
         if current_valid_acc < self.best_valid_acc:
             self.best_valid_acc = current_valid_acc
             print(f"\nBest validation accuracy: {self.best_valid_acc}")
             print(f"\nSaving best model\n")
             torch.save(model.state_dict(), self.path_to_saved_models)
+
+            lines = [f'Saving results for epoch {epoch} :', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
+                     f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'balanced accuracy : {(100*recall_score(y_true, y_pred)):>0.1f}',
+                     f'cm : {confusion_matrix(y_true, y_pred)}']
+
+            with open(self.name_txt_file, 'a') as f:
+                f.write('\n\n')
+                f.write('\n'.join(lines))
