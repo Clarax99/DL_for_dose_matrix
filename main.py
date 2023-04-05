@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms as tf
 import os
+import sys
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
@@ -27,7 +28,7 @@ if __name__ == "__main__":
         elif user=="menardth":
             path_to_dir = "G:\data\dose_matrices_updated_25_01_2023"
 
-    min_card_age = 40
+    min_card_age = 50  #int(sys.argv[1])
     weights = torch.tensor([1,(1378-282)/282]) if min_card_age==40 else torch.tensor([1, (580-282)/282])
     batch_size = 4
     epochs = 50
@@ -51,7 +52,7 @@ if __name__ == "__main__":
     name_exp = f'newnet_noreg_{min_card_age}_allfeat_weighted_loss_3'
     net = NewNet(70, 15, 10).to(DEVICE)
     loss = nn.CrossEntropyLoss(weights)
-    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0)
+    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0) #int(sys.argv[2])
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, f"{name_exp}.pth")
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
@@ -64,9 +65,11 @@ if __name__ == "__main__":
             f.write(f'{key} : {dic[key]}\n')
 
     ### TRAINING
-    for epoch in range(epochs):
+    for epoch in range(2):
         print(f"-------------------------\nEpoch {epoch+1}")
         model.train_loop(epoch)
         model.validation_loop(epoch)
+    model.plot_loss()
+    model.plot_acc()
     print("Done!")    
 

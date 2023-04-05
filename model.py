@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 from sklearn.metrics import balanced_accuracy_score, cohen_kappa_score, confusion_matrix,f1_score, ConfusionMatrixDisplay, accuracy_score, recall_score
 import os
+import matplotlib.pyplot as plt
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from tqdm import tqdm 
 
@@ -178,14 +179,20 @@ class Loop():
         self.loss_fct = loss_fct
         self.optimizer = optimizer
         self.device= device
+        self.path_to_dir = path_to_dir
+        self.name_model = name_model
         self.save_best_model = SaveBestModel(os.path.join(path_to_dir, "saved_models"), name_model)
+        self.train_loss, self.train_acc = [], []
+        self.val_loss, self.val_acc, self.val_recall = [], [], []
 
     def train_loop(self, epoch):
         size = len(self.train_dataloader.dataset)
         num_batches = len(self.train_dataloader)
         train_loss, train_acc = 0, 0
+        labels, outputs = [], []
 
         for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False):
+            labels.extend(y.tolist())
             # Compute prediction and loss
             if self.net.__class__.__name__ == "NewNet": 
                 pred = self.net(X[0].to(self.device), X[1].to(self.device))
@@ -199,10 +206,11 @@ class Loop():
             self.optimizer.step()
 
             train_loss += loss.item()/num_batches
-            y_pred_class = pred.argmax(1)
-            train_acc += (y_pred_class.to(self.device) == y.to(self.device)).sum()/size
+            outputs.extend(pred.argmax(1))
 
-        print(f"Train Error: \n Accuracy: {(100*train_acc):>0.1f}%, Avg loss: {train_loss:>8f} \n")
+        self.train_loss.append(train_loss)
+        self.train_acc.append(100*balanced_accuracy_score(labels, outputs))
+        print(f"Train Error: \n Balanced Accuracy: {(100*balanced_accuracy_score(labels, outputs)):>0.1f}%, Avg loss: {train_loss:>8f} \n")
 
     def validation_loop(self, epoch):
         size = len(self.val_dataloader.dataset)
@@ -224,9 +232,32 @@ class Loop():
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Balanced Accuracy: {(100*balanced_accuracy_score(y_val, y_pred)):>0.1f}%,  Avg loss: {test_loss:>8f} \n")
 
         self.save_best_model(epoch, y_val, y_pred, self.net, test_loss)
-
+        self.val_loss.append(test_loss)
+        self.val_acc.append(100*balanced_accuracy_score(y_val, y_pred))
+        self.val_recall.append(100*recall_score(y_val, y_pred))
         cm = confusion_matrix(y_true=y_val, y_pred=y_pred)
         print(cm)
+
+    def plot_loss(self):
+        plt.plot(range(len(self.train_loss)), self.train_loss, label="Train Loss")
+        plt.plot(range(len(self.train_loss)), self.val_loss, label = 'validation Loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title(f'Accuracy and Recall from {self.name_model}')
+        plt.savefig(os.path.join(self.path_to_dir, "saved_models", "saved_plots", self.name_model.replace('.pth', '_loss.jpg')))
+        plt.close()
+
+    def plot_acc(self):
+        plt.plot(range(len(self.train_loss)), self.train_acc, label = 'Train Accuracy')
+        plt.plot(range(len(self.train_loss)), self.val_acc, label = 'Validation Accuracy')
+        plt.plot(range(len(self.train_loss)), self.val_recall, label = 'Validation Recall')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy and Recall')
+        plt.legend()
+        plt.title(f'Accuracy and Recall from {self.name_model}')
+        plt.savefig(os.path.join(self.path_to_dir, "saved_models", "saved_plots", self.name_model.replace('.pth', '_acc.jpg')))
+        plt.close()
 
 
 class SaveBestModel:
@@ -235,34 +266,36 @@ class SaveBestModel:
     validation accuracy is less than the previous least less, then save the
     model state.
     """
-    def __init__(self, path_to_saved_models, name_model, best_val_acc=float('inf'), best_val_loss=float('inf')):
+    def __init__(self, path_to_saved_models, name_model, best_val_acc=float('-inf'), best_val_loss=float('inf')):
         self.best_val_acc = best_val_acc
         self.best_val_loss = best_val_loss
         self.path_to_saved_models = path_to_saved_models
         self.name_model = name_model
-        self.name_txt_file = self.path_to_saved_models.replace('pth', 'txt')
+        self.name_txt_file = os.path.join(self.path_to_saved_models, self.name_model.replace('pth', 'txt'))
         
     def __call__(self, epoch, y_true, y_pred, model, loss):
         current_val_acc = 100*balanced_accuracy_score(y_true, y_pred)
         current_val_loss = loss
-        if current_val_acc > self.best_val_acc :
-            mode = 'acc'
-            self.best_val_acc = current_val_acc
-            print(f"\nBest validation accuracy: {self.best_val_acc}")
-            print(f"\nSaving best model\n")
-            torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_acc.pth')))
-        
-        elif current_val_loss < self.best_val_loss:
+        if current_val_loss < self.best_val_loss:
             mode = 'loss'
             self.best_val_loss = current_val_loss
             print(f"\nBest validation loss: {self.best_val_loss}")
             print(f"\nSaving best model\n")
             torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_loss.pth')))
+            lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
+                        f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}',
+                        f'cm : {confusion_matrix(y_true, y_pred)}']
             
-
-        lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
-                    f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'balanced accuracy : {(100*recall_score(y_true, y_pred)):>0.1f}',
-                    f'cm : {confusion_matrix(y_true, y_pred)}']
+        elif current_val_acc > self.best_val_acc :
+            mode = 'acc'
+            self.best_val_acc = current_val_acc
+            print(f"\nBest validation accuracy: {self.best_val_acc}")
+            print(f"\nSaving best model\n")
+            torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_acc.pth')))
+            lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
+                        f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',
+                        f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}', f'cm : {confusion_matrix(y_true, y_pred)}']
+        
 
         with open(self.name_txt_file, 'a') as f:
             f.write('\n\n')
