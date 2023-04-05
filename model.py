@@ -235,23 +235,35 @@ class SaveBestModel:
     validation accuracy is less than the previous least less, then save the
     model state.
     """
-    def __init__(self, path_to_saved_models, name_model, best_valid_acc=float('inf')):
-        self.best_valid_acc = best_valid_acc
-        self.path_to_saved_models = os.path.join(path_to_saved_models, name_model)
+    def __init__(self, path_to_saved_models, name_model, best_val_acc=float('inf'), best_val_loss=float('inf')):
+        self.best_val_acc = best_val_acc
+        self.best_val_loss = best_val_loss
+        self.path_to_saved_models = path_to_saved_models
+        self.name_model = name_model
         self.name_txt_file = self.path_to_saved_models.replace('pth', 'txt')
         
     def __call__(self, epoch, y_true, y_pred, model, loss):
-        current_valid_acc = 100*balanced_accuracy_score(y_true, y_pred)
-        if current_valid_acc < self.best_valid_acc:
-            self.best_valid_acc = current_valid_acc
-            print(f"\nBest validation accuracy: {self.best_valid_acc}")
+        current_val_acc = 100*balanced_accuracy_score(y_true, y_pred)
+        current_val_loss = loss
+        if current_val_acc > self.best_val_acc :
+            mode = 'acc'
+            self.best_val_acc = current_val_acc
+            print(f"\nBest validation accuracy: {self.best_val_acc}")
             print(f"\nSaving best model\n")
-            torch.save(model.state_dict(), self.path_to_saved_models)
+            torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_acc.pth')))
+        
+        elif current_val_loss < self.best_val_loss:
+            mode = 'loss'
+            self.best_val_loss = current_val_loss
+            print(f"\nBest validation loss: {self.best_val_loss}")
+            print(f"\nSaving best model\n")
+            torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_loss.pth')))
+            
 
-            lines = [f'Saving results for epoch {epoch} :', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
-                     f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'balanced accuracy : {(100*recall_score(y_true, y_pred)):>0.1f}',
-                     f'cm : {confusion_matrix(y_true, y_pred)}']
+        lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
+                    f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'balanced accuracy : {(100*recall_score(y_true, y_pred)):>0.1f}',
+                    f'cm : {confusion_matrix(y_true, y_pred)}']
 
-            with open(self.name_txt_file, 'a') as f:
-                f.write('\n\n')
-                f.write('\n'.join(lines))
+        with open(self.name_txt_file, 'a') as f:
+            f.write('\n\n')
+            f.write('\n'.join(lines))
