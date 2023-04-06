@@ -191,14 +191,14 @@ class Loop():
         train_loss, train_acc = 0, 0
         labels, outputs = [], []
 
-        for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False):
+        for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False, disable=True):
             labels.extend(y.tolist())
             # Compute prediction and loss
             if self.net.__class__.__name__ == "NewNet": 
                 pred = self.net(X[0].to(self.device), X[1].to(self.device))
             else : 
                 pred = self.net(X.float().to(self.device))  
-            loss = self.loss_fct(pred, y.to(self.device))
+            loss = self.loss_fct(pred.to(self.device), y.to(self.device))
 
             # Backpropagation
             self.optimizer.zero_grad()
@@ -206,7 +206,7 @@ class Loop():
             self.optimizer.step()
 
             train_loss += loss.item()/num_batches
-            outputs.extend(pred.argmax(1))
+            outputs.extend(pred.argmax(1).detach().cpu().numpy().tolist())
 
         self.train_loss.append(train_loss)
         self.train_acc.append(100*balanced_accuracy_score(labels, outputs))
@@ -219,16 +219,16 @@ class Loop():
         y_val, y_pred = [], []
 
         with torch.no_grad():
-            for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False):
+            for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False, disable=True):
                 y_val.extend(y.tolist())
                 if self.net.__class__.__name__ == "NewNet": 
                     pred = self.net(X[0].to(self.device), X[1].to(self.device))
                 else : 
                     pred = self.net(X.float().to(self.device))  
-                y_pred.extend(pred.argmax(1).tolist())
-                test_loss += self.loss_fct(pred, y.to(self.device)).item()/num_batches
+                y_pred.extend(pred.argmax(1).detach().cpu().numpy().tolist())
+                test_loss += self.loss_fct(pred.to(self.device), y.to(self.device)).item()/num_batches
                 correct += (pred.argmax(1).to(self.device) == y.to(self.device)).type(torch.float).sum().item()/size
-
+                
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Balanced Accuracy: {(100*balanced_accuracy_score(y_val, y_pred)):>0.1f}%,  Avg loss: {test_loss:>8f} \n")
 
         self.save_best_model(epoch, y_val, y_pred, self.net, test_loss)
@@ -285,6 +285,10 @@ class SaveBestModel:
             lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
                         f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}',
                         f'cm : {confusion_matrix(y_true, y_pred)}']
+
+            with open(self.name_txt_file, 'a') as f:
+                f.write('\n\n')
+                f.write('\n'.join(lines))
             
         elif current_val_acc > self.best_val_acc :
             mode = 'acc'
@@ -297,6 +301,7 @@ class SaveBestModel:
                         f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}', f'cm : {confusion_matrix(y_true, y_pred)}']
         
 
-        with open(self.name_txt_file, 'a') as f:
-            f.write('\n\n')
-            f.write('\n'.join(lines))
+            with open(self.name_txt_file, 'a') as f:
+                f.write('\n\n')
+                f.write('\n'.join(lines))
+

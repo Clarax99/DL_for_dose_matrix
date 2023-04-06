@@ -60,7 +60,8 @@ class NiiFeatureDataset(Dataset):
 
     self.labels_csv = pd.read_csv(join(path_to_dir, annotations_file), sep=',')
     self.feature_csv = pd.read_csv(join(path_to_dir, feature_file), sep=',', index_col="file_name")
-    self.feature_list = self.feature_csv.columns[3:]
+    #self.feature_list = self.feature_csv.columns[3:]  ### all features
+    self.feature_list = ['do_ANTHRA', 'do_ALKYL','do_VINCA']   ### only anthra, alkyl and vinca
 
     if training:
       self.labels_csv = self.labels_csv[self.labels_csv[f'train_{min_card_age}'] == 1]
@@ -83,7 +84,8 @@ class NiiFeatureDataset(Dataset):
     image = torch.tensor(image[0:1, 2:66, 3:67, 3:67])
 
     label = self.labels_csv.iloc[idx]['Pathologie_cardiaque_3_new']
-    features = torch.tensor(self.feature_csv.iloc[idx][self.feature_list])
+    features = torch.tensor(self.labels_csv.iloc[idx][self.feature_list])     ### Only vinca, alkyl et anthra
+    #features = torch.tensor(self.feature_csv.iloc[idx][self.feature_list])   ### all features
     
     if self.transform:
         image = self.transform(image)

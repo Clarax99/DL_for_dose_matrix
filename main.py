@@ -14,7 +14,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 if __name__ == "__main__":
 
     ### WHO IS RUNNING THE CODE
-    on_ruche = False
+    on_ruche = True
     user = "cousteixc"
 
     ### CONFIG
@@ -28,11 +28,11 @@ if __name__ == "__main__":
         elif user=="menardth":
             path_to_dir = "G:\data\dose_matrices_updated_25_01_2023"
 
-    min_card_age = 50  #int(sys.argv[1])
-    weights = torch.tensor([1,(1378-282)/282]) if min_card_age==40 else torch.tensor([1, (580-282)/282])
-    batch_size = 4
-    epochs = 50
+    min_card_age = int(sys.argv[1])
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    weights = torch.tensor([1,(1378-282)/282]) if min_card_age==40 else torch.tensor([1, (580-282)/282]).to(DEVICE)
+    batch_size = 128  
+    epochs = 150
     
     ### DATALOADER
     data_transform = tf.Compose([tf.Normalize(mean=1.3, std=4.9)])
@@ -49,10 +49,10 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=False)
 
     ### NET AND LOSS
-    name_exp = f'newnet_noreg_{min_card_age}_allfeat_weighted_loss_3'
-    net = NewNet(70, 15, 10).to(DEVICE)
-    loss = nn.CrossEntropyLoss(weights)
-    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0) #int(sys.argv[2])
+    name_exp = f'0_newnet_noreg_{min_card_age}_3feat_weighted_loss'
+    net = NewNet(3, 15, 10).to(DEVICE)
+    loss = nn.CrossEntropyLoss(weights)  #weights
+    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001) # , weight_decay=10**(-int(sys.argv[2]))
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, f"{name_exp}.pth")
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
             f.write(f'{key} : {dic[key]}\n')
 
     ### TRAINING
-    for epoch in range(2):
+    for epoch in range(epochs):
         print(f"-------------------------\nEpoch {epoch+1}")
         model.train_loop(epoch)
         model.validation_loop(epoch)
