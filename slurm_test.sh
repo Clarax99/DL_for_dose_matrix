@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=4_CNN2feat_noreg_50_weighted_loss
+#SBATCH --job-name=legrandtestOMG
 #SBATCH --output=%x.o%j
 #SBATCH --time=01:30:00
 #SBATCH --ntasks=1
@@ -17,4 +17,4 @@ module load cuda/11.7.0/intel-20.0.4.304
 source activate pytorch
 
 # Train the network
-python main.py 50 -g
+python predict.py

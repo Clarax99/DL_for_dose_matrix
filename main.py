@@ -1,5 +1,5 @@
 from dataset import niiDataset, NiiFeatureDataset
-from model import FirstNet, CNN, Loop, CNN_tho, NewNet
+from model import FirstNet, CNN, Loop, CNN_tho, NewNet, CNN_with_feat
 from loss import LDAMHingeLoss
 from os.path import join
 import torch
@@ -30,8 +30,8 @@ if __name__ == "__main__":
 
     min_card_age = int(sys.argv[1])
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    weights = torch.tensor([1,(1378-282)/282]) if min_card_age==40 else torch.tensor([1, (580-282)/282]).to(DEVICE)
-    batch_size = 128  
+    weights = torch.tensor([1,(1378-282)/282]).to(DEVICE) if min_card_age==40 else torch.tensor([1, (580-282)/282]).to(DEVICE)
+    batch_size = 2
     epochs = 150
     
     ### DATALOADER
@@ -49,10 +49,11 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=False)
 
     ### NET AND LOSS
-    name_exp = f'0_newnet_noreg_{min_card_age}_3feat_weighted_loss'
-    net = NewNet(3, 15, 10).to(DEVICE)
+    name_exp = f'3_firstnet_noreg_{int(sys.argv[1])}_weighted_loss'  #{int(sys.argv[2])}
+    #net = NewNet(3, 15, 10).to(DEVICE)
+    net = CNN_with_feat(3, 16).to(DEVICE)
     loss = nn.CrossEntropyLoss(weights)  #weights
-    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001) # , weight_decay=10**(-int(sys.argv[2]))
+    optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001) # weight_decay=10**(-int(sys.argv[2]))
     model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, f"{name_exp}.pth")
     print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 

@@ -170,6 +170,77 @@ class CNN_tho(nn.Module):
         x = self.fc3(x)
         return x
 
+class CNN_with_feat(nn.Module):
+
+    def __init__(self, dim_features: int, out_channels: int):
+        super(CNN_with_feat, self).__init__()
+
+        self.dim_features : int = dim_features
+        self.out_channels : int = out_channels
+        
+        self.conv1 = nn.Sequential(
+            nn.Conv3d(1, out_channels, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(),
+            )
+        self.conv2 = nn.Sequential(
+            nn.Conv3d(out_channels, out_channels*2, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*2),
+            nn.ReLU(),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv3d(out_channels*2, out_channels*3, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels*3),
+            nn.ReLU(),
+            torch.nn.MaxPool3d(kernel_size=2, stride=2),
+            )
+        self.conv4 = nn.Sequential(
+            nn.Conv3d(out_channels*3, out_channels*4, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*4),
+            nn.ReLU(),
+        )
+        self.conv5 = nn.Sequential(
+            nn.Conv3d(out_channels*4, out_channels*5, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels*5),
+            nn.ReLU(),
+            )
+        self.conv6 = nn.Sequential(
+            nn.Conv3d(out_channels*5, out_channels*6, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*6),
+            nn.ReLU(),
+        )
+
+        self.reduction_path = nn.Sequential(
+            nn.Linear(3145728, 2048), 
+            nn.ReLU(),
+            nn.Linear(2048, 256), 
+            nn.ReLU(),
+            nn.Linear(256, 16)
+        )
+        
+        self.conv_path = nn.Sequential(self.conv1, self.conv2, self.conv3, self.conv4,self.conv5,self.conv6,nn.Flatten(), self.reduction_path)
+
+        self.feature_path = nn.Sequential(
+            nn.Linear(dim_features, self.out_channels), 
+            nn.ReLU()
+        )
+
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(self.out_channels*2, 10),
+            nn.ReLU(),
+            nn.Linear(10, 2)
+        )
+
+
+    def forward(self, x1, x2):
+        x1 = self.conv_path(x1.float())
+        print(x1.shape)
+        x2 = self.feature_path(x2.float())
+        print(x2.shape)
+        x_cat = torch.cat((x1, x2), dim=1)
+        x_cat = self.fusion_layer(x_cat)
+        return x_cat
+
 class Loop():
 
     def __init__(self, train_dataloader, val_dataloader, net, loss_fct, optimizer, device, path_to_dir, name_model):
@@ -194,7 +265,7 @@ class Loop():
         for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False, disable=True):
             labels.extend(y.tolist())
             # Compute prediction and loss
-            if self.net.__class__.__name__ == "NewNet": 
+            if self.net.__class__.__name__ == "NewNet" or self.net.__class__.__name__ == "CNN_with_feat": 
                 pred = self.net(X[0].to(self.device), X[1].to(self.device))
             else : 
                 pred = self.net(X.float().to(self.device))  
