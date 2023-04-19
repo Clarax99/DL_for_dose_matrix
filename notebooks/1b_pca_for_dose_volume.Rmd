@@ -1,0 +1,74 @@
+---
+title: "pca_for_dose_volume"
+author: "Clara Cousteix"
+date: "2023-01-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message=FALSE}
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(corrplot)
+library(GGally)
+library(factoextra)
+library(pheatmap)
+library(dendextend)
+library(PMA)
+
+```
+
+
+```{r}
+data = read.csv('data/doses_volumes_patients_update_110123.csv', sep=',')
+data
+```
+
+
+```{r}
+data[!complete.cases(data),]
+
+data_no_na = na.omit(data)
+
+data_for_pca = select(data_no_na, -c('ctr', 'numcent', 'Pathologie_cardiaque_3_new', 'card_age'))
+
+i = nrow(data_no_na[data_no_na$Pathologie_cardiaque_3_new==1,])
+
+index = sample(nrow(data_for_pca[data_no_na$Pathologie_cardiaque_3_new==0,]), i)
+data_for_pca_small = data_for_pca[(data_no_na$Pathologie_cardiaque_3_new==1)|(data_for_pca),]
+
+```
+
+
+```{r}
+print((data_no_na[data_no_na$Pathologie_cardiaque_3_new==1,]))
+print(index)
+
+
+```
+
+
+```{r}
+fit.pca <- prcomp(data_for_pca, scale = TRUE)
+```
+
+
+```{r}
+fviz_pca_ind(fit.pca, habillage = data_no_na[,"Pathologie_cardiaque_3_new"], label="none")
+#fviz_pca_ind(fit.pca, label="none")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
