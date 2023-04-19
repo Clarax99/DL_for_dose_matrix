@@ -18,7 +18,7 @@ Il apparaît donc que les réseaux de neurones parviennent mieux à prédire les
 
 ## Organisation du code
 
-Les analyses de survie sont disponibles dans le notebook Analyse_de_survie.ipynb dans le dossier "notebooks".
+Le prétraitement des données de survie, les analyses de survie, l'analyse en composantes principales sont disponibles dans le notebook Analyse_de_survie.ipynb dans le dossier "notebooks".
 
 Les analyses en Machine Learning sont disponibles dans le notebook ML_dosevolume.ipynb dans le dossier "notebooks".
 
