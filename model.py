@@ -170,6 +170,77 @@ class CNN_tho(nn.Module):
         x = self.fc3(x)
         return x
 
+class CNN_with_feat(nn.Module):
+
+    def __init__(self, dim_features: int, out_channels: int):
+        super(CNN_with_feat, self).__init__()
+
+        self.dim_features : int = dim_features
+        self.out_channels : int = out_channels
+        
+        self.conv1 = nn.Sequential(
+            nn.Conv3d(1, out_channels, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(),
+            )
+        self.conv2 = nn.Sequential(
+            nn.Conv3d(out_channels, out_channels*2, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*2),
+            nn.ReLU(),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv3d(out_channels*2, out_channels*3, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels*3),
+            nn.ReLU(),
+            torch.nn.MaxPool3d(kernel_size=2, stride=2),
+            )
+        self.conv4 = nn.Sequential(
+            nn.Conv3d(out_channels*3, out_channels*4, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*4),
+            nn.ReLU(),
+        )
+        self.conv5 = nn.Sequential(
+            nn.Conv3d(out_channels*4, out_channels*5, kernel_size=3, stride = 1, padding =1),
+            nn.BatchNorm3d(out_channels*5),
+            nn.ReLU(),
+            )
+        self.conv6 = nn.Sequential(
+            nn.Conv3d(out_channels*5, out_channels*6, kernel_size=3, stride =1, padding = 1),
+            nn.BatchNorm3d(out_channels*6),
+            nn.ReLU(),
+        )
+
+        self.reduction_path = nn.Sequential(
+            nn.Linear(3145728, 2048), 
+            nn.ReLU(),
+            nn.Linear(2048, 256), 
+            nn.ReLU(),
+            nn.Linear(256, 16)
+        )
+        
+        self.conv_path = nn.Sequential(self.conv1, self.conv2, self.conv3, self.conv4,self.conv5,self.conv6,nn.Flatten(), self.reduction_path)
+
+        self.feature_path = nn.Sequential(
+            nn.Linear(dim_features, self.out_channels), 
+            nn.ReLU()
+        )
+
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(self.out_channels*2, 10),
+            nn.ReLU(),
+            nn.Linear(10, 2)
+        )
+
+
+    def forward(self, x1, x2):
+        x1 = self.conv_path(x1.float())
+        print(x1.shape)
+        x2 = self.feature_path(x2.float())
+        print(x2.shape)
+        x_cat = torch.cat((x1, x2), dim=1)
+        x_cat = self.fusion_layer(x_cat)
+        return x_cat
+
 class Loop():
 
     def __init__(self, train_dataloader, val_dataloader, net, loss_fct, optimizer, device, path_to_dir, name_model):
@@ -191,14 +262,14 @@ class Loop():
         train_loss, train_acc = 0, 0
         labels, outputs = [], []
 
-        for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False):
+        for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False, disable=True):
             labels.extend(y.tolist())
             # Compute prediction and loss
-            if self.net.__class__.__name__ == "NewNet": 
+            if self.net.__class__.__name__ == "NewNet" or self.net.__class__.__name__ == "CNN_with_feat": 
                 pred = self.net(X[0].to(self.device), X[1].to(self.device))
             else : 
                 pred = self.net(X.float().to(self.device))  
-            loss = self.loss_fct(pred, y.to(self.device))
+            loss = self.loss_fct(pred.to(self.device), y.to(self.device))
 
             # Backpropagation
             self.optimizer.zero_grad()
@@ -206,7 +277,7 @@ class Loop():
             self.optimizer.step()
 
             train_loss += loss.item()/num_batches
-            outputs.extend(pred.argmax(1))
+            outputs.extend(pred.argmax(1).detach().cpu().numpy().tolist())
 
         self.train_loss.append(train_loss)
         self.train_acc.append(100*balanced_accuracy_score(labels, outputs))
@@ -219,16 +290,16 @@ class Loop():
         y_val, y_pred = [], []
 
         with torch.no_grad():
-            for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False):
+            for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False, disable=True):
                 y_val.extend(y.tolist())
                 if self.net.__class__.__name__ == "NewNet": 
                     pred = self.net(X[0].to(self.device), X[1].to(self.device))
                 else : 
                     pred = self.net(X.float().to(self.device))  
-                y_pred.extend(pred.argmax(1).tolist())
-                test_loss += self.loss_fct(pred, y.to(self.device)).item()/num_batches
+                y_pred.extend(pred.argmax(1).detach().cpu().numpy().tolist())
+                test_loss += self.loss_fct(pred.to(self.device), y.to(self.device)).item()/num_batches
                 correct += (pred.argmax(1).to(self.device) == y.to(self.device)).type(torch.float).sum().item()/size
-
+                
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Balanced Accuracy: {(100*balanced_accuracy_score(y_val, y_pred)):>0.1f}%,  Avg loss: {test_loss:>8f} \n")
 
         self.save_best_model(epoch, y_val, y_pred, self.net, test_loss)
@@ -285,6 +356,10 @@ class SaveBestModel:
             lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
                         f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}',
                         f'cm : {confusion_matrix(y_true, y_pred)}']
+
+            with open(self.name_txt_file, 'a') as f:
+                f.write('\n\n')
+                f.write('\n'.join(lines))
             
         elif current_val_acc > self.best_val_acc :
             mode = 'acc'
@@ -297,6 +372,7 @@ class SaveBestModel:
                         f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}', f'cm : {confusion_matrix(y_true, y_pred)}']
         
 
-        with open(self.name_txt_file, 'a') as f:
-            f.write('\n\n')
-            f.write('\n'.join(lines))
+            with open(self.name_txt_file, 'a') as f:
+                f.write('\n\n')
+                f.write('\n'.join(lines))
+
