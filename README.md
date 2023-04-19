@@ -14,7 +14,7 @@ Il apparaît donc que les réseaux de neurones parviennent mieux à prédire les
 
 ## Sélection des patients pour l'étude
 
-blablabla
+![image](https://user-images.githubusercontent.com/124738526/233184048-87b450e5-813b-4b24-92e7-a4df069dc79d.png)
 
 ## Organisation du code
 
