@@ -50,3 +50,19 @@ Le chemin "path_to_dir" doit être l'emplacement d'un dossier data, organisé ai
 * un dossier csv (optionnel) : les fichiers CSV correspondent aux doses par séance de radiothérapie par patient. Les csv de chaque patient dans un intervalle de 6 mois ont été sommés pour former l'image résultante en format NIFTI, enregistrée dans le dossier nii. Ce dossier est optionnel, nécessaire seulement si on souhaite modifier les images NIFTI.
 
 ![image](https://user-images.githubusercontent.com/124738526/233300459-8ce7f4af-8ea0-42cc-ac55-696a34a68ab5.png)
+
+## Fichier labels.csv
+
+| Nom de la colonne | Signification | Valeur attendue |
+|-------------------|---------------|-----------------|
+| ctr  | Numéro du centre de traitement   | [1, 3, 8, 10, 12]   |
+| numcent   | Identifiant du patient dans son centre   | 199600389 par ex|
+| file_location  | chemin absolu vers l'image nii| `D:\data\dose_matrices\nii\heart_cropped\CURIE\newdosi_3_199600389_ID2013A.nii.gz` par ex|
+| file_name   | Nom de l'image nii   | newdosi_3_199600389_ID2013A.nii.gz par ex|
+| Pathologie_cardiaque_3_new   | label | 0 ou 1   |
+| do_ANTHRA/do_ALKYL/do_VINCA   | doses de famille de chimiothérapie reçue   | flottant positif  |
+| card_age   | Temps à l'apparition d'une maladie cardiaque ou à défaut temps de censure | flottant positif |
+| card_age_40/card_age_50   | 1 si [(apparition d'une maladie cardiaque) OU (si tps_censure>40, resp 50)], 0 sinon  | 0 ou 1  |
+| train_40, resp train_50 | Patients d'entraînement pour card_age_40 = 1, resp card_age_50 = 1, 60% du dataset d'étude  | 0 ou 1   |
+| val_40, resp val_50 | Patients de validation pour card_age_40 = 1, resp card_age_50 = 1, 20% du dataset d'étude  | 0 ou 1   |
+| test_40, resp test_50 | Patients de test pour card_age_40 = 1, resp card_age_50 = 1, 20% du dataset d'étude  | 0 ou 1   |
