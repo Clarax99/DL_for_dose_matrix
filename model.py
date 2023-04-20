@@ -262,7 +262,7 @@ class Loop():
         train_loss, train_acc = 0, 0
         labels, outputs = [], []
 
-        for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False, disable=True):
+        for X, y in tqdm(self.train_dataloader, desc=f"Epoch {epoch+1} training...", ascii=False, ncols=75, leave=False, disable=False):
             labels.extend(y.tolist())
             # Compute prediction and loss
             if self.net.__class__.__name__ == "NewNet" or self.net.__class__.__name__ == "CNN_with_feat": 
@@ -290,7 +290,7 @@ class Loop():
         y_val, y_pred = [], []
 
         with torch.no_grad():
-            for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False, disable=True):
+            for X, y in tqdm(self.val_dataloader, desc=f"Epoch {epoch+1} testing...", ascii=False, ncols=75, leave=False, disable=False):
                 y_val.extend(y.tolist())
                 if self.net.__class__.__name__ == "NewNet": 
                     pred = self.net(X[0].to(self.device), X[1].to(self.device))

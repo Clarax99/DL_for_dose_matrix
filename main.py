@@ -14,7 +14,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 if __name__ == "__main__":
 
     ### WHO IS RUNNING THE CODE
-    on_ruche = True
+    on_ruche = False
     user = "cousteixc"
 
     ### CONFIG
@@ -28,34 +28,38 @@ if __name__ == "__main__":
         elif user=="menardth":
             path_to_dir = "G:\data\dose_matrices_updated_25_01_2023"
 
-    min_card_age = int(sys.argv[1])
+    min_card_age = 50 #int(sys.argv[1]) # Temps de censure minimal = 40 ou 50
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    weights = torch.tensor([1,(1378-282)/282]).to(DEVICE) if min_card_age==40 else torch.tensor([1, (580-282)/282]).to(DEVICE)
+    loss_weights = torch.tensor([1,(1378-282)/282]).to(DEVICE) if min_card_age==40 else torch.tensor([1, (580-282)/282]).to(DEVICE) 
     batch_size = 2
     epochs = 150
-    
+
+    ### NET
+    net = NewNet(3, 15, 10).to(DEVICE)
+    net = FirstNet().to(DEVICE)
+    #net = CNN(16).to(DEVICE)
+    #net = CNN_tho(16).to(DEVICE)
+    #net = CNN_with_feat(3, 16).to(DEVICE)  #not working yes
+
+    name_exp = f'4_{net.__class__.__name__}_noreg_{min_card_age}_weighted_loss'  #{int(sys.argv[2])}  #remplacer le "noreg" par {int(sys.argv[2])} if exists
+
     ### DATALOADER
-    data_transform = tf.Compose([tf.Normalize(mean=1.3, std=4.9)])
+    if net.__class__.__name__ == "NewNet":
+        training_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, training = True)
+        val_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, validation = True)
 
-    training_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, training = True)
-    val_data = NiiFeatureDataset(csv_name, "clinical_features.csv", path_to_dir, min_card_age, validation = True)
-
-    #training_data = niiDataset(csv_name, path_to_dir, min_card_age, training = True)
-    #val_data = niiDataset(csv_name, path_to_dir, min_card_age, validation = True)
+    else : 
+        training_data = niiDataset(csv_name, path_to_dir, min_card_age, training = True)
+        val_data = niiDataset(csv_name, path_to_dir, min_card_age, validation = True)
 
     print(f"Train set : {len(training_data)}, Validation set : {len(val_data)}")
 
     train_dataloader = DataLoader(training_data, batch_size, shuffle=True, drop_last=False)
     val_dataloader = DataLoader(val_data, batch_size, shuffle=True, drop_last=False)
 
-    ### NET AND LOSS
-    name_exp = f'3_firstnet_noreg_{int(sys.argv[1])}_weighted_loss'  #{int(sys.argv[2])}
-    #net = NewNet(3, 15, 10).to(DEVICE)
-    net = CNN_with_feat(3, 16).to(DEVICE)
-    loss = nn.CrossEntropyLoss(weights)  #weights
+    ### LOSS AND OPTIMIZER
+    loss = nn.CrossEntropyLoss(loss_weights) 
     optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001) # weight_decay=10**(-int(sys.argv[2]))
-    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, f"{name_exp}.pth")
-    print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
 
     ### SAVING PARAMETERS
     dic = {"name":name_exp, "min_card_age":min_card_age, "net": net.__class__.__name__, "loss": loss.__class__.__name__, "weighted": True if loss.weight!=None else False,
@@ -66,6 +70,9 @@ if __name__ == "__main__":
             f.write(f'{key} : {dic[key]}\n')
 
     ### TRAINING
+    model = Loop(train_dataloader, val_dataloader, net, loss, optimizer, DEVICE, path_to_dir, f"{name_exp}.pth")
+    print(f"Training {net.__class__.__name__} for {epochs} epochs on {DEVICE}")
+
     for epoch in range(epochs):
         print(f"-------------------------\nEpoch {epoch+1}")
         model.train_loop(epoch)
