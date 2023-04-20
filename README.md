@@ -36,3 +36,17 @@ python predict.py
 ```
 
 Les fichiers shell sont destinés à l'exécution du code sur le supercalculteur de l'Université Paris Saclay, le Mésocentre
+
+## Organisation des données
+
+Le chemin "path_to_dir" doit être l'emplacement d'un dossier data, organisé ainsi qu'illustré dans l'image ci-dessous. Il est nécessaire d'avoir : 
+* un dossier nii, contenant toutes les images
+* un ficher labels.csv, dont le contenu sera détaillé plus tard
+* un fichier clinical_features.csv , avec les colonnes "ctr", "numcent", "file_name" et les données cliniques
+* un dossier saved models, lui-même contenant : 
+   * les modèles entraînés et enregistrés, ainsi qu'un fichier texte par modèle. Par défaut, exécuter le code enregistrera deux poids : ceux qui minimisent la validation_loss et ceux qui minimisent le la validation_balanced_accuracy. Empiriquement, on remarque que les poids qui minimisent la validation loss donnent de meilleurs résultats sur le test set. Les fichiers textes enregistrent les hyperparamètres du modèle, ainsi que les epochs avec enregistrement des poids.
+   * le dossier saved_plots. Une fois toutes les epochs effectuées, on enregistre des plots des loss d'entraînement, ainsi que les valeurs de balanced accuracy et de recall.
+   * un dossier saved_plots_test : par modèle testé, on a une matrice de confusion sur le test set, ainsi qu'un fichier texte avec les valeurs des métriques sur le test set
+* un dossier csv (optionnel) : les fichiers CSV correspondent aux doses par séance de radiothérapie par patient. Les csv de chaque patient dans un intervalle de 6 mois ont été sommés pour former l'image résultante en format NIFTI, enregistrée dans le dossier nii. Ce dossier est optionnel, nécessaire seulement si on souhaite modifier les images NIFTI.
+
+![image](https://user-images.githubusercontent.com/124738526/233300459-8ce7f4af-8ea0-42cc-ac55-696a34a68ab5.png)
