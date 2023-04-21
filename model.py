@@ -1,14 +1,14 @@
 import torch.nn as nn
 import torch
-from sklearn.metrics import balanced_accuracy_score, cohen_kappa_score, confusion_matrix,f1_score, ConfusionMatrixDisplay, accuracy_score, recall_score
+from sklearn.metrics import balanced_accuracy_score, confusion_matrix, ConfusionMatrixDisplay, accuracy_score, recall_score
 import os
 import matplotlib.pyplot as plt
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from tqdm import tqdm 
 
 
-
 class FirstNet(nn.Module):
+    # Réseau linéaire, avec 3 Fully Connected Layers
     def __init__(self,  hidden_units=200):
         super(FirstNet, self).__init__()
 
@@ -27,7 +27,8 @@ class FirstNet(nn.Module):
         return x.float()
     
 class CNN(nn.Module):
-    def __init__(self, out_channels: int, hidden_units : int =200):
+    # Réseau convolutionnel, 2 convolutionnal layers suivies de 3 fully connected layers
+    def __init__(self, out_channels: int = 16, hidden_units : int =200):
         super(CNN, self).__init__()
         self.out_channels : int = out_channels
         self.conv1 = nn.Sequential(
@@ -59,8 +60,10 @@ class CNN(nn.Module):
         return x
 
 class NewNet(nn.Module):
-     
-     def __init__(self, dim_features: int, out_channels_1: int, out_channels_2: int):
+     # réseau multi chemin, inspiré de l'article [2] IBRAGIMOV, Bulat, TOESCA, Diego AS, YUAN, Yixuan, et al. Neural networks for deep radiotherapy dose analysis 
+     # and prediction of liver SBRT outcomes. IEEE journal of biomedical and health informatics, 2019, vol. 23, no 5​
+
+     def __init__(self, dim_features: int, out_channels_1: int =  15, out_channels_2: int = 10):
         super(NewNet, self).__init__()
 
         self.out_channels_1 : int = out_channels_1
@@ -113,6 +116,8 @@ class NewNet(nn.Module):
         return x_cat
 
 class CNN_tho(nn.Module):
+    # Réseau convolutionnel, 6 convolutionnal layers suivies de 3 fully connected layers
+
     def __init__(self, out_channels: int, hidden_units : int =200):
         super(CNN_tho, self).__init__()
         self.out_channels : int = out_channels
@@ -171,7 +176,7 @@ class CNN_tho(nn.Module):
         return x
 
 class CNN_with_feat(nn.Module):
-
+    # Not working
     def __init__(self, dim_features: int, out_channels: int):
         super(CNN_with_feat, self).__init__()
 
@@ -348,12 +353,11 @@ class SaveBestModel:
         current_val_acc = 100*balanced_accuracy_score(y_true, y_pred)
         current_val_loss = loss
         if current_val_loss < self.best_val_loss:
-            mode = 'loss'
             self.best_val_loss = current_val_loss
             print(f"\nBest validation loss: {self.best_val_loss}")
             print(f"\nSaving best model\n")
             torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_loss.pth')))
-            lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
+            lines = [f'Saving results for epoch {epoch} :', f'Best Loss', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
                         f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}',
                         f'cm : {confusion_matrix(y_true, y_pred)}']
 
@@ -362,12 +366,11 @@ class SaveBestModel:
                 f.write('\n'.join(lines))
             
         elif current_val_acc > self.best_val_acc :
-            mode = 'acc'
             self.best_val_acc = current_val_acc
             print(f"\nBest validation accuracy: {self.best_val_acc}")
             print(f"\nSaving best model\n")
             torch.save(model.state_dict(), os.path.join(self.path_to_saved_models, self.name_model.replace('.pth', '_on_acc.pth')))
-            lines = [f'Saving results for epoch {epoch} :', f'mode : {mode}', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
+            lines = [f'Saving results for epoch {epoch} :', f'Best Accuracy', f'loss : {loss}', f'acc : {(100*accuracy_score(y_true, y_pred)):>0.1f}',
                         f'balanced accuracy : {(100*balanced_accuracy_score(y_true, y_pred)):>0.1f}',
                         f'recall : {(100*recall_score(y_true, y_pred)):>0.1f}', f'cm : {confusion_matrix(y_true, y_pred)}']
         

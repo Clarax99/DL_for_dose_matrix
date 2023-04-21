@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     ### NET
     net = NewNet(3, 15, 10).to(DEVICE)
-    net = FirstNet().to(DEVICE)
+    #net = FirstNet().to(DEVICE)
     #net = CNN(16).to(DEVICE)
     #net = CNN_tho(16).to(DEVICE)
     #net = CNN_with_feat(3, 16).to(DEVICE)  #not working yes

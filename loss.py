@@ -5,6 +5,9 @@ import numpy as np
 
 
 class LDAMHingeLoss(nn.Module):
+    # not working
+    # inspired by CAO, Kaidi, WEI, Colin, GAIDON, Adrien, et al. Learning imbalanced datasets with label-distribution-aware margin loss. 
+    # Advances in neural information processing systems, 2019, vol. 32.​
     def __init__(self, C, weights, n_data):
         super(LDAMHingeLoss, self).__init__()
         self.C = C

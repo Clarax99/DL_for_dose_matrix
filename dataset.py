@@ -7,10 +7,17 @@ import torch
 
 
 class niiDataset(Dataset):
+# Pour les modèles ne prenant en entier que les matrices de doses (format nii)
 
   def __init__(self, annotations_file, path_to_dir, min_card_age, 
                training=False, validation=False, transform=None, target_transform=None):
     
+    # annotations_file : nom du fichier contenant les labels (0 ou 1)
+    # path_to_dir : chemin vers le dossier contenant les images (dans le sous-dossier nii), les labels (annotations_file)
+    # min_card_age : entier de valeur 40 ou 50, correspond au temps de censure minimal
+    # training, validation : booleans
+    # transform, feature_transform : if needed.
+
     assert min_card_age == 40 or min_card_age == 50
 
     self.labels_csv = pd.read_csv(join(path_to_dir, annotations_file), sep=',')
@@ -38,13 +45,14 @@ class niiDataset(Dataset):
     label = self.img_labels.iloc[idx]['Pathologie_cardiaque_3_new']
 
     if self.transform:
-        image = self.transform(image) #add transformations :  which ones ? 
+        image = self.transform(image)
     if self.target_transform:
         label = self.target_transform(label)
 
     return image_cropped, label
   
 class NiiFeatureDataset(Dataset):
+# Pour les modèles prenants en entrée des matrices de doses et des variables cliniques
 
   def __init__(self, annotations_file, feature_file, path_to_dir, min_card_age,
               training=False, validation=False, transform=None, feature_transform=None):
@@ -53,9 +61,10 @@ class NiiFeatureDataset(Dataset):
     # même dossier que "annotations_file", accessible grâce à "path_to_dir"
     # path_to_dir : chemin vers le dossier contenant les images (dans le sous-dossier nii), les labels (annotations_file)
     # et les features cliniques (feature_file)
-    # min_card_age : entier de valeur ou 50, correspond au temps de censure minimal
+    # min_card_age : entier de valeur 40 ou 50, correspond au temps de censure minimal
     # training, validation : booleans
     # transform, feature_transform : if needed.
+
     assert min_card_age == 40 or min_card_age == 50    
 
     self.labels_csv = pd.read_csv(join(path_to_dir, annotations_file), sep=',')
@@ -96,9 +105,16 @@ class NiiFeatureDataset(Dataset):
 
 
 class TestDataset(Dataset):
+# Pour tester les modèles ne prenant en entrée que les matrices de doses
 
   def __init__(self, annotations_file, path_to_dir, min_card_age, 
                testing=True, transform=None, target_transform=None):
+    
+    # annotations_file : nom du fichier contenant les labels (0 ou 1)
+    # path_to_dir : chemin vers le dossier contenant les images (dans le sous-dossier nii), les labels (annotations_file)
+    # min_card_age : entier de valeur 40 ou 50, correspond au temps de censure minimal
+    # training, validation : booleans
+    # transform, feature_transform : if needed.
     
     assert min_card_age == 40 or min_card_age == 50
 
@@ -132,15 +148,24 @@ class TestDataset(Dataset):
     return image_cropped, label
 
 class FeatTestDataset(Dataset):
+# Pour tester les modèles prenant en entrée les matrices de doses et les variables cliniques
 
   def __init__(self, annotations_file, path_to_dir, min_card_age, 
                testing=True, transform=None, target_transform=None):
     
+    # annotations_file : nom du fichier contenant les labels (0 ou 1)
+    # feature_file : nom du ficher contenant les variable cliniques de la chimiothérapie. Ce fichier est situé dans le 
+    # même dossier que "annotations_file", accessible grâce à "path_to_dir"
+    # path_to_dir : chemin vers le dossier contenant les images (dans le sous-dossier nii), les labels (annotations_file)
+    # et les features cliniques (feature_file)
+    # min_card_age : entier de valeur 40 ou 50, correspond au temps de censure minimal
+    # training, validation : booleans
+    # transform, feature_transform : if needed.
+
     assert min_card_age == 40 or min_card_age == 50
 
     self.labels_csv = pd.read_csv(join(path_to_dir, annotations_file), sep=',')
     self.feature_list = ['do_ANTHRA', 'do_ALKYL','do_VINCA']   ### only anthra, alkyl and vinca
-
 
     if testing:
       self.img_labels = self.labels_csv[self.labels_csv[f'test_{min_card_age}'] == 1]
